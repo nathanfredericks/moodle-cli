@@ -22,14 +22,15 @@ type assignmentCourse struct {
 }
 
 type assignmentItem struct {
-	ID                       int    `json:"id"`
-	CMID                     int    `json:"cmid"`
-	Name                     string `json:"name"`
-	DueDate                  int64  `json:"duedate"`
-	AllowSubmissionsFromDate int64  `json:"allowsubmissionsfromdate"`
-	Grade                    int    `json:"grade"`
-	Intro                    string `json:"intro"`
-	Course                   int    `json:"course"`
+	ID                       int         `json:"id"`
+	CMID                     int         `json:"cmid"`
+	Name                     string      `json:"name"`
+	DueDate                  int64       `json:"duedate"`
+	AllowSubmissionsFromDate int64       `json:"allowsubmissionsfromdate"`
+	Grade                    int         `json:"grade"`
+	Intro                    string      `json:"intro"`
+	Course                   int         `json:"course"`
+	IntroAttachments         []fileEntry `json:"introattachments"`
 }
 
 func newListCmd(f *cmdutil.Factory) *cobra.Command {

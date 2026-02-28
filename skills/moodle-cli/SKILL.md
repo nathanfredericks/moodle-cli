@@ -31,7 +31,7 @@ moodle
 │   ├── upload <id> <file>  # Upload files to an assignment
 │   ├── submit <id>         # Submit assignment for grading
 │   ├── text <id>           # View or update online text submission
-│   └── download <id>       # Download submission files
+│   └── download <id>       # Download submission files (-R for resources)
 ├── forum                   # Manage forums
 │   ├── list                # List forums in a course (--course)
 │   ├── discussions <id>    # List discussions in a forum
@@ -106,6 +106,13 @@ moodle forum discussions 5                  # list discussions
 moodle forum read 100                       # read a thread
 moodle forum reply 200 --message "Thanks!"  # reply to a post
 moodle forum post 5 --subject "Question" --message "Hello"  # new discussion
+```
+
+**Download assignment resources:**
+```bash
+moodle assignment get 101                   # see attached resources
+moodle assignment download 101 --resources  # download instructor-attached files
+moodle assignment download 101 -R -o ./resources  # download to a directory
 ```
 
 **Download course files:**

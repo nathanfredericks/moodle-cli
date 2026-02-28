@@ -22,7 +22,10 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
   moodle assignment get 101
 
   # Get assignment details as JSON
-  moodle assignment get 101 -f json`,
+  moodle assignment get 101 -f json
+
+  # Download any listed resources
+  moodle assignment download 101 --resources`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := f.Client()
@@ -106,6 +109,14 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 			}
 
 			table.Rows = append(table.Rows, map[string]string{"Field": "Max Grade", "Value": strconv.Itoa(found.Grade)})
+
+			// Show intro attachments (instructor resources)
+			for _, file := range found.IntroAttachments {
+				table.Rows = append(table.Rows, map[string]string{
+					"Field": "Resource",
+					"Value": fmt.Sprintf("%s (%s)", file.FileName, text.FormatFileSize(file.FileSize)),
+				})
+			}
 
 			if status.LastAttempt != nil && status.LastAttempt.Submission != nil {
 				sub := status.LastAttempt.Submission

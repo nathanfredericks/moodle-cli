@@ -20,11 +20,12 @@ import (
 func newDownloadCmd(f *cmdutil.Factory) *cobra.Command {
 	var outputDir string
 	var force bool
+	var resources bool
 
 	cmd := &cobra.Command{
 		Use:   "download <assignment-id>",
 		Short: "Download submission files",
-		Long:  "Download all files from your submission for an assignment.",
+		Long:  "Download all files from your submission for an assignment. Use --resources to download instructor-attached resource files instead.",
 		Example: `  # Download submission files
   moodle assignment download 101
 
@@ -32,7 +33,10 @@ func newDownloadCmd(f *cmdutil.Factory) *cobra.Command {
   moodle assignment download 101 -o ./submissions
 
   # Overwrite existing files
-  moodle assignment download 101 -o ./submissions -F`,
+  moodle assignment download 101 -o ./submissions -F
+
+  # Download instructor-attached resources
+  moodle assignment download 101 --resources`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := f.Client()
@@ -45,31 +49,64 @@ func newDownloadCmd(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid assignment ID: %s", args[0])
 			}
 
-			var result submissionStatusResponse
-			params := map[string]any{
-				"assignid": assignID,
-			}
-			if err := client.Call(cmd.Context(), "mod_assign_get_submission_status", params, &result); err != nil {
-				return fmt.Errorf("failed to get submission status: %w", err)
-			}
-
-			if result.LastAttempt == nil || result.LastAttempt.Submission == nil {
-				return fmt.Errorf("no submission found for assignment %d", assignID)
-			}
-
-			// Collect all downloadable files from submission plugins
 			var files []fileEntry
-			for _, p := range result.LastAttempt.Submission.Plugins {
-				if p.Type == "file" {
-					for _, fa := range p.FileAreas {
-						files = append(files, fa.Files...)
+
+			if resources {
+				// Download intro attachments (instructor resources)
+				var listResult assignmentListResponse
+				if err := client.Call(cmd.Context(), "mod_assign_get_assignments", map[string]any{}, &listResult); err != nil {
+					return fmt.Errorf("failed to get assignments: %w", err)
+				}
+
+				var found *assignmentItem
+				for _, c := range listResult.Courses {
+					for i, a := range c.Assignments {
+						if a.ID == assignID {
+							found = &c.Assignments[i]
+							break
+						}
+					}
+					if found != nil {
+						break
 					}
 				}
-			}
 
-			if len(files) == 0 {
-				fmt.Fprintln(f.IO.Out, "No files found in submission.")
-				return nil
+				if found == nil {
+					return fmt.Errorf("assignment %d not found", assignID)
+				}
+
+				files = found.IntroAttachments
+
+				if len(files) == 0 {
+					fmt.Fprintln(f.IO.Out, "No resource files found for this assignment.")
+					return nil
+				}
+			} else {
+				// Download submission files
+				var result submissionStatusResponse
+				params := map[string]any{
+					"assignid": assignID,
+				}
+				if err := client.Call(cmd.Context(), "mod_assign_get_submission_status", params, &result); err != nil {
+					return fmt.Errorf("failed to get submission status: %w", err)
+				}
+
+				if result.LastAttempt == nil || result.LastAttempt.Submission == nil {
+					return fmt.Errorf("no submission found for assignment %d", assignID)
+				}
+
+				for _, p := range result.LastAttempt.Submission.Plugins {
+					if p.Type == "file" {
+						for _, fa := range p.FileAreas {
+							files = append(files, fa.Files...)
+						}
+					}
+				}
+
+				if len(files) == 0 {
+					fmt.Fprintln(f.IO.Out, "No files found in submission.")
+					return nil
+				}
 			}
 
 			// Get auth token for download URLs
@@ -112,6 +149,7 @@ func newDownloadCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "Output directory")
 	cmd.Flags().BoolVarP(&force, "force", "F", false, "Overwrite existing files")
+	cmd.Flags().BoolVarP(&resources, "resources", "R", false, "Download instructor-attached resource files instead of submission files")
 
 	return cmd
 }

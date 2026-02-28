@@ -18,6 +18,9 @@ moodle assignment get <assignment-id> [flags]
 
   # Get assignment details as JSON
   moodle assignment get 101 -f json
+
+  # Download any listed resources
+  moodle assignment download 101 --resources
 ```
 
 ### Options

@@ -101,7 +101,7 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 
 			if found.DueDate > 0 {
 				t := time.Unix(found.DueDate, 0)
-				dueStr := t.Format("2006-01-02 15:04")
+				dueStr := t.Format("2006-01-02 15:04 MST")
 				if time.Now().After(t) {
 					dueStr += " (overdue)"
 				}
@@ -124,7 +124,7 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 					map[string]string{"Field": "Submission Status", "Value": sub.Status},
 				)
 				if sub.TimeModified > 0 {
-					table.Rows = append(table.Rows, map[string]string{"Field": "Last Modified", "Value": time.Unix(sub.TimeModified, 0).Format("2006-01-02 15:04")})
+					table.Rows = append(table.Rows, map[string]string{"Field": "Last Modified", "Value": time.Unix(sub.TimeModified, 0).Format("2006-01-02 15:04 MST")})
 				}
 
 				// Show submitted files
@@ -164,7 +164,7 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 					table.Rows = append(table.Rows, map[string]string{"Field": "Grade", "Value": text.StripHTML(status.Feedback.GradeForDisplay)})
 				}
 				if status.Feedback.GradedDate > 0 {
-					table.Rows = append(table.Rows, map[string]string{"Field": "Graded Date", "Value": time.Unix(status.Feedback.GradedDate, 0).Format("2006-01-02 15:04")})
+					table.Rows = append(table.Rows, map[string]string{"Field": "Graded Date", "Value": time.Unix(status.Feedback.GradedDate, 0).Format("2006-01-02 15:04 MST")})
 				}
 				for _, p := range status.Feedback.Plugins {
 					if p.Type == "comments" {

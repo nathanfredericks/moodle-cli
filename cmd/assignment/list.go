@@ -89,7 +89,7 @@ func newListCmd(f *cmdutil.Factory) *cobra.Command {
 					dueStr := "No due date"
 					if a.DueDate > 0 {
 						t := time.Unix(a.DueDate, 0)
-						dueStr = t.Format("2006-01-02 15:04")
+						dueStr = t.Format("2006-01-02 15:04 MST")
 						if time.Now().After(t) {
 							dueStr += " (overdue)"
 						}

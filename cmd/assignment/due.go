@@ -3,6 +3,7 @@ package assignment
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -159,7 +160,7 @@ func newDueCmd(f *cmdutil.Factory) *cobra.Command {
 				dueStr := "No due date"
 				if e.TimeSort > 0 {
 					t := time.Unix(e.TimeSort, 0)
-					dueStr = t.Format("2006-01-02 15:04")
+					dueStr = t.Format("2006-01-02 15:04 MST")
 					if e.Overdue {
 						dueStr += " (overdue)"
 					}
@@ -169,7 +170,7 @@ func newDueCmd(f *cmdutil.Factory) *cobra.Command {
 					"Course ID": strconv.Itoa(e.Course.ID),
 					"Type":      e.ModuleName,
 					"Course":    e.Course.FullName,
-					"Name":      e.Name,
+					"Name":      strings.TrimSuffix(e.Name, " is due"),
 					"Due Date":  dueStr,
 				})
 			}

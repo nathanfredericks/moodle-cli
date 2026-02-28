@@ -140,11 +140,11 @@ func formatTimestamp(ts int64) string {
 	case diff < 24*time.Hour:
 		return fmt.Sprintf("%dh ago", int(diff.Hours()))
 	case diff < 7*24*time.Hour:
-		return t.Format("Mon 3:04 PM")
+		return t.Format("Mon 3:04 PM MST")
 	default:
 		if t.Year() == now.Year() {
-			return t.Format("Jan 2, 3:04 PM")
+			return t.Format("Jan 2, 3:04 PM MST")
 		}
-		return t.Format("Jan 2, 2006")
+		return t.Format("Jan 2, 2006 MST")
 	}
 }

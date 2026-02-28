@@ -41,6 +41,7 @@ List, view, submit, and manage assignments.
 
 * [moodle](moodle.md)	 - CLI for the Moodle LMS
 * [moodle assignment download](moodle_assignment_download.md)	 - Download submission files
+* [moodle assignment due](moodle_assignment_due.md)	 - Show upcoming due dates
 * [moodle assignment get](moodle_assignment_get.md)	 - Get assignment details
 * [moodle assignment list](moodle_assignment_list.md)	 - List assignments
 * [moodle assignment status](moodle_assignment_status.md)	 - Check submission status

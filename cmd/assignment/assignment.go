@@ -26,6 +26,7 @@ func NewCmd(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	cmd.AddCommand(newListCmd(f))
+	cmd.AddCommand(newDueCmd(f))
 	cmd.AddCommand(newGetCmd(f))
 	cmd.AddCommand(newStatusCmd(f))
 	cmd.AddCommand(newSubmitCmd(f))

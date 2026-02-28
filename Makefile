@@ -21,7 +21,7 @@ generate:
 	go generate ./...
 
 docs:
-	go run ./tools/gendocs -out docs/
+	go run ./tools/gendocs -out skills/moodle-cli/references
 
 install: build
 	mv $(BINARY) $(GOPATH)/bin/

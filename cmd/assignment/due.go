@@ -2,6 +2,7 @@ package assignment
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -144,6 +145,8 @@ func newDueCmd(f *cmdutil.Factory) *cobra.Command {
 
 			table := &output.TableData{
 				Columns: []output.Column{
+					{Name: "ID"},
+					{Name: "Course ID"},
 					{Name: "Type"},
 					{Name: "Course"},
 					{Name: "Name"},
@@ -162,10 +165,12 @@ func newDueCmd(f *cmdutil.Factory) *cobra.Command {
 					}
 				}
 				table.Rows = append(table.Rows, map[string]string{
-					"Type":     e.ModuleName,
-					"Course":   e.Course.FullName,
-					"Name":     e.Name,
-					"Due Date": dueStr,
+					"ID":        strconv.Itoa(e.ID),
+					"Course ID": strconv.Itoa(e.Course.ID),
+					"Type":      e.ModuleName,
+					"Course":    e.Course.FullName,
+					"Name":      e.Name,
+					"Due Date":  dueStr,
 				})
 			}
 

@@ -3,6 +3,7 @@ package assignment
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -32,6 +33,17 @@ func newSubmitCmd(f *cmdutil.Factory) *cobra.Command {
 			assignID, err := strconv.Atoi(args[0])
 			if err != nil {
 				return fmt.Errorf("invalid assignment ID: %s", args[0])
+			}
+
+			found, _, err := lookupAssignment(cmd.Context(), client, assignID)
+			if err != nil {
+				return err
+			}
+			if found.AllowSubmissionsFromDate > 0 {
+				openTime := time.Unix(found.AllowSubmissionsFromDate, 0)
+				if time.Now().Before(openTime) {
+					return fmt.Errorf("assignment %d is not open for submission until %s", assignID, openTime.Format("2006-01-02 15:04 MST"))
+				}
 			}
 
 			params := map[string]any{

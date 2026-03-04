@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -42,6 +43,17 @@ func newTextCmd(f *cmdutil.Factory) *cobra.Command {
 
 			// If saving, update the online text
 			if save != "" || stdin {
+				found, _, err := lookupAssignment(cmd.Context(), client, assignID)
+				if err != nil {
+					return err
+				}
+				if found.AllowSubmissionsFromDate > 0 {
+					openTime := time.Unix(found.AllowSubmissionsFromDate, 0)
+					if time.Now().Before(openTime) {
+						return fmt.Errorf("assignment %d is not open for submission until %s", assignID, openTime.Format("2006-01-02 15:04 MST"))
+					}
+				}
+
 				text := save
 				if stdin {
 					data, err := io.ReadAll(os.Stdin)

@@ -38,29 +38,9 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid assignment ID: %s", args[0])
 			}
 
-			// Fetch assignment details from the assignments list
-			var listResult assignmentListResponse
-			if err := client.Call(cmd.Context(), "mod_assign_get_assignments", map[string]any{}, &listResult); err != nil {
-				return fmt.Errorf("failed to get assignments: %w", err)
-			}
-
-			var found *assignmentItem
-			var courseName string
-			for _, c := range listResult.Courses {
-				for i, a := range c.Assignments {
-					if a.ID == assignID {
-						found = &c.Assignments[i]
-						courseName = c.FullName
-						break
-					}
-				}
-				if found != nil {
-					break
-				}
-			}
-
-			if found == nil {
-				return fmt.Errorf("assignment %d not found", assignID)
+			found, courseName, err := lookupAssignment(cmd.Context(), client, assignID)
+			if err != nil {
+				return err
 			}
 
 			// Fetch submission status
@@ -106,6 +86,15 @@ func newGetCmd(f *cmdutil.Factory) *cobra.Command {
 					dueStr += " (overdue)"
 				}
 				table.Rows = append(table.Rows, map[string]string{"Field": "Due Date", "Value": dueStr})
+			}
+
+			if found.AllowSubmissionsFromDate > 0 {
+				t := time.Unix(found.AllowSubmissionsFromDate, 0)
+				openStr := t.Format("2006-01-02 15:04 MST")
+				if time.Now().Before(t) {
+					openStr += " (not yet open)"
+				}
+				table.Rows = append(table.Rows, map[string]string{"Field": "Opens", "Value": openStr})
 			}
 
 			table.Rows = append(table.Rows, map[string]string{"Field": "Max Grade", "Value": strconv.Itoa(found.Grade)})

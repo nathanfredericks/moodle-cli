@@ -3,6 +3,7 @@ package assignment
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -99,6 +100,11 @@ func newStatusCmd(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("invalid assignment ID: %s", args[0])
 			}
 
+			found, _, err := lookupAssignment(cmd.Context(), client, assignID)
+			if err != nil {
+				return err
+			}
+
 			var result submissionStatusResponse
 			params := map[string]any{
 				"assignid": assignID,
@@ -125,6 +131,15 @@ func newStatusCmd(f *cmdutil.Factory) *cobra.Command {
 				Rows: []map[string]string{
 					{"Field": "Assignment ID", "Value": args[0]},
 				},
+			}
+
+			if found.AllowSubmissionsFromDate > 0 {
+				t := time.Unix(found.AllowSubmissionsFromDate, 0)
+				openStr := t.Format("2006-01-02 15:04 MST")
+				if time.Now().Before(t) {
+					openStr += " (not yet open)"
+				}
+				table.Rows = append(table.Rows, map[string]string{"Field": "Opens", "Value": openStr})
 			}
 
 			if result.LastAttempt != nil {

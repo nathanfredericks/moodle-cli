@@ -26,6 +26,7 @@ type tokenResponse struct {
 func newLoginCmd(f *cmdutil.Factory) *cobra.Command {
 	var moodleURL string
 	var username string
+	var password string
 
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -60,14 +61,18 @@ func newLoginCmd(f *cmdutil.Factory) *cobra.Command {
 				return fmt.Errorf("username is required")
 			}
 
-			// Prompt for password (no echo)
-			fmt.Fprint(f.IO.Out, "Password: ")
-			passwordBytes, err := term.ReadPassword(int(syscall.Stdin))
-			fmt.Fprintln(f.IO.Out) // newline after password
-			if err != nil {
-				return fmt.Errorf("failed to read password: %w", err)
+			// Prompt for password (no echo) if not provided via flag/env —
+			// keeps interactive use unchanged while allowing non-interactive
+			// callers (e.g. the MCP server, which has no TTY) to pass it directly.
+			if password == "" {
+				fmt.Fprint(f.IO.Out, "Password: ")
+				passwordBytes, err := term.ReadPassword(int(syscall.Stdin))
+				fmt.Fprintln(f.IO.Out) // newline after password
+				if err != nil {
+					return fmt.Errorf("failed to read password: %w", err)
+				}
+				password = string(passwordBytes)
 			}
-			password := string(passwordBytes)
 			if password == "" {
 				return fmt.Errorf("password is required")
 			}
@@ -122,6 +127,7 @@ func newLoginCmd(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.Flags().StringVarP(&moodleURL, "url", "u", os.Getenv("MOODLE_URL"), "Moodle instance URL")
 	cmd.Flags().StringVar(&username, "username", "", "Username")
+	cmd.Flags().StringVar(&password, "password", os.Getenv("MOODLE_PASSWORD"), "Password (uses MOODLE_PASSWORD env var if unset; omit both to be prompted interactively)")
 
 	return cmd
 }

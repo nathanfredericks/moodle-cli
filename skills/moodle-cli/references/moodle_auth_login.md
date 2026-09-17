@@ -24,6 +24,7 @@ moodle auth login [flags]
 
 ```
   -h, --help              help for login
+      --password string   Password (uses MOODLE_PASSWORD env var if unset; omit both to be prompted interactively)
   -u, --url string        Moodle instance URL
       --username string   Username
 ```

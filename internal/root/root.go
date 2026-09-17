@@ -35,6 +35,14 @@ func Root() *cobra.Command {
 		},
 	}
 
+	return New(f, "dev")
+}
+
+// New returns the full command tree wired to the given factory and version.
+// Unlike Root, this tree is safe to execute: it uses the supplied factory for
+// real I/O and API access, so it's the shape used both by the `moodle` binary
+// itself and by the MCP server, which builds one fresh tree per tool call.
+func New(f *cmdutil.Factory, version string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "moodle",
 		Short: "CLI for the Moodle LMS",
@@ -53,19 +61,29 @@ func Root() *cobra.Command {
 
   # Output as JSON for scripting
   moodle course list -f json`,
+		SilenceUsage:      true,
+		SilenceErrors:     true,
 		DisableAutoGenTag: true,
 	}
 
-	cmd.PersistentFlags().StringP("format", "f", "", "Output format: table, json, csv, yaml, plain")
-	cmd.PersistentFlags().Bool("no-color", false, "Disable color output")
-	cmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
+	var formatStr string
+	var noColor bool
+	var verbose bool
+
+	cmd.PersistentFlags().StringVarP(&formatStr, "format", "f", "", "Output format: table, json, csv, yaml, plain")
+	cmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable color output")
+	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
+	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		f.NoColor = noColor || output.NoColorEnabled()
+		f.Verbose = verbose
+	}
 
 	// Version command
 	cmd.AddCommand(&cobra.Command{
 		Use:   "version",
 		Short: "Print the version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "moodle version dev")
+			fmt.Fprintf(f.IO.Out, "moodle version %s\n", version)
 		},
 	})
 

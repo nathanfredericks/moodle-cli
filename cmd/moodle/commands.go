@@ -10,6 +10,7 @@ import (
 	configcmd "github.com/nathanfredericks/moodle-cli/cmd/config"
 	coursecmd "github.com/nathanfredericks/moodle-cli/cmd/course"
 	forumcmd "github.com/nathanfredericks/moodle-cli/cmd/forum"
+	mcpcmd "github.com/nathanfredericks/moodle-cli/cmd/mcp"
 	usercmd "github.com/nathanfredericks/moodle-cli/cmd/user"
 )
 
@@ -20,5 +21,6 @@ func registerCommands(rootCmd *cobra.Command, f *cmdutil.Factory) {
 	rootCmd.AddCommand(usercmd.NewCmd(f))
 	rootCmd.AddCommand(assignmentcmd.NewCmd(f))
 	rootCmd.AddCommand(forumcmd.NewCmd(f))
+	rootCmd.AddCommand(mcpcmd.NewCmd(f, Version))
 	rootCmd.AddCommand(newShellCompletionCmd())
 }

@@ -9,6 +9,7 @@ import (
 	authcmd "github.com/nathanfredericks/moodle-cli/cmd/auth"
 	configcmd "github.com/nathanfredericks/moodle-cli/cmd/config"
 	coursecmd "github.com/nathanfredericks/moodle-cli/cmd/course"
+	databasecmd "github.com/nathanfredericks/moodle-cli/cmd/database"
 	forumcmd "github.com/nathanfredericks/moodle-cli/cmd/forum"
 	mcpcmd "github.com/nathanfredericks/moodle-cli/cmd/mcp"
 	usercmd "github.com/nathanfredericks/moodle-cli/cmd/user"
@@ -20,6 +21,7 @@ func registerCommands(rootCmd *cobra.Command, f *cmdutil.Factory) {
 	rootCmd.AddCommand(coursecmd.NewCmd(f))
 	rootCmd.AddCommand(usercmd.NewCmd(f))
 	rootCmd.AddCommand(assignmentcmd.NewCmd(f))
+	rootCmd.AddCommand(databasecmd.NewCmd(f))
 	rootCmd.AddCommand(forumcmd.NewCmd(f))
 	rootCmd.AddCommand(mcpcmd.NewCmd(f, Version))
 	rootCmd.AddCommand(newShellCompletionCmd())

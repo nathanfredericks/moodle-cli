@@ -16,6 +16,7 @@ import (
 	authcmd "github.com/nathanfredericks/moodle-cli/cmd/auth"
 	configcmd "github.com/nathanfredericks/moodle-cli/cmd/config"
 	coursecmd "github.com/nathanfredericks/moodle-cli/cmd/course"
+	databasecmd "github.com/nathanfredericks/moodle-cli/cmd/database"
 	forumcmd "github.com/nathanfredericks/moodle-cli/cmd/forum"
 	usercmd "github.com/nathanfredericks/moodle-cli/cmd/user"
 )
@@ -93,6 +94,7 @@ func New(f *cmdutil.Factory, version string) *cobra.Command {
 	cmd.AddCommand(coursecmd.NewCmd(f))
 	cmd.AddCommand(usercmd.NewCmd(f))
 	cmd.AddCommand(assignmentcmd.NewCmd(f))
+	cmd.AddCommand(databasecmd.NewCmd(f))
 	cmd.AddCommand(forumcmd.NewCmd(f))
 
 	return cmd

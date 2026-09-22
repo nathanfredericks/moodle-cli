@@ -31,6 +31,9 @@ type Options struct {
 	APIKey string
 	// Version is reported to MCP clients and by the "version" tool.
 	Version string
+	// DisableLocalhostProtection permits an external Host header when the
+	// server is reached through a trusted loopback reverse proxy.
+	DisableLocalhostProtection bool
 }
 
 // Serve starts the MCP server and blocks until it exits.
@@ -47,7 +50,11 @@ func NewHandler(opts Options) http.Handler {
 		mcpServer.AddTool(buildTool(leaf), makeHandler(opts.Version, leaf.path))
 	}
 
-	httpServer := server.NewStreamableHTTPServer(mcpServer, server.WithEndpointPath("/mcp"))
+	httpServer := server.NewStreamableHTTPServer(
+		mcpServer,
+		server.WithEndpointPath("/mcp"),
+		server.WithDisableLocalhostProtection(opts.DisableLocalhostProtection),
+	)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

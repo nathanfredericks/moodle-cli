@@ -1,7 +1,9 @@
 package mcpserver
 
 import (
+	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +30,31 @@ func TestMCPRequiresBearerToken(t *testing.T) {
 		if res.Code != http.StatusUnauthorized {
 			t.Fatalf("authorization %q: status = %d, want %d", authorization, res.Code, http.StatusUnauthorized)
 		}
+	}
+}
+
+func TestLocalhostProtectionCanBeDisabledForTrustedProxy(t *testing.T) {
+	initialize := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}`
+	request := func() *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(initialize))
+		req.Host = "example.lambda-url.ca-central-1.on.aws"
+		req.Header.Set("Authorization", "Bearer secret")
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		localAddr := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8080}
+		return req.WithContext(context.WithValue(req.Context(), http.LocalAddrContextKey, localAddr))
+	}
+
+	protected := httptest.NewRecorder()
+	NewHandler(Options{APIKey: "secret", Version: "test"}).ServeHTTP(protected, request())
+	if protected.Code != http.StatusForbidden {
+		t.Fatalf("protected status = %d, want %d", protected.Code, http.StatusForbidden)
+	}
+
+	proxied := httptest.NewRecorder()
+	NewHandler(Options{APIKey: "secret", Version: "test", DisableLocalhostProtection: true}).ServeHTTP(proxied, request())
+	if proxied.Code != http.StatusOK {
+		t.Fatalf("proxied status = %d, body = %s", proxied.Code, proxied.Body.String())
 	}
 }
 

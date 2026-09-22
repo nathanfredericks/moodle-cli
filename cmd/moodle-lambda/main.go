@@ -41,8 +41,9 @@ func run(ctx context.Context) error {
 	}
 
 	return mcpserver.Serve(mcpserver.Options{
-		Addr:    ":8080",
-		APIKey:  runtimeCfg.MCPAPIKey,
-		Version: Version,
+		Addr:                       ":8080",
+		APIKey:                     runtimeCfg.MCPAPIKey,
+		Version:                    Version,
+		DisableLocalhostProtection: true,
 	})
 }

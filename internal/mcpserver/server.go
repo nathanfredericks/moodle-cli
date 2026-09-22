@@ -35,6 +35,12 @@ type Options struct {
 
 // Serve starts the MCP server and blocks until it exits.
 func Serve(opts Options) error {
+	return http.ListenAndServe(opts.Addr, NewHandler(opts))
+}
+
+// NewHandler constructs the authenticated HTTP handler used by both the local
+// MCP server and the AWS Lambda Web Adapter runtime.
+func NewHandler(opts Options) http.Handler {
 	mcpServer := server.NewMCPServer("moodle-cli", opts.Version, server.WithToolCapabilities(false))
 
 	for _, leaf := range collectLeaves(root.Root()) {
@@ -49,7 +55,7 @@ func Serve(opts Options) error {
 	})
 	mux.Handle("/mcp", requireBearer(opts.APIKey, httpServer))
 
-	return http.ListenAndServe(opts.Addr, mux)
+	return mux
 }
 
 func requireBearer(apiKey string, next http.Handler) http.Handler {

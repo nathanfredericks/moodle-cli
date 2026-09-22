@@ -1,59 +1,104 @@
-name: Build and Publish
+name: Validate and Deploy
 
 on:
+  pull_request:
   push:
     branches:
       - main
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 permissions:
-  packages: write
   contents: read
 
+env:
+  AWS_REGION: ca-central-1
+  AWS_ACCOUNT_ID: "187489282488"
+  AWS_DEPLOY_ROLE_ARN: arn:aws:iam::187489282488:role/MoodleMCPGitHubDeploymentRole
+  ECR_REPOSITORY: moodle-mcp
+  SAM_ARTIFACT_BUCKET: aws-sam-cli-managed-default-samclisourcebucket-wamv9ffcwtfw
+  STACK_NAME: moodle-mcp
+
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Generate build ID
-        id: prep
-        run: |
-          branch=${GITHUB_REF##*/}
-          sha=${GITHUB_SHA::8}
-          ts=$(date +%s)
-          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "image_name=ghcr.io/${OWNER}/moodle-cli" >> $GITHUB_OUTPUT
-          echo "build_id=${branch}-${sha}-${ts}" >> $GITHUB_OUTPUT
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up AWS SAM
+        uses: aws-actions/setup-sam@v2
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test
+        run: go test ./... -count=1
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+      - name: Validate SAM templates
+        run: |
+          sam validate --lint --template-file template.yaml
+          sam validate --lint --template-file infrastructure/bootstrap.yaml
+
+      - name: Build Lambda image
+        run: sam build --template-file template.yaml
+
+  deploy:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: moodle-mcp-production
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          build-args: |
-            VERSION=${{ steps.prep.outputs.build_id }}
-          tags: |
-            ${{ steps.prep.outputs.image_name }}:${{ steps.prep.outputs.build_id }}
-            ${{ steps.prep.outputs.image_name }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up AWS SAM
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: moodle-mcp-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build Lambda image
+        run: sam build --template-file template.yaml
+
+      - name: Authenticate Docker to ECR
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" |
+            docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+
+      - name: Deploy to Lambda
+        run: |
+          sam deploy \
+            --template-file .aws-sam/build/template.yaml \
+            --stack-name "$STACK_NAME" \
+            --region "$AWS_REGION" \
+            --s3-bucket "$SAM_ARTIFACT_BUCKET" \
+            --image-repositories "MoodleMCPFunction=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY" \
+            --parameter-overrides MoodleSecretName=moodle-mcp \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --on-failure ROLLBACK \
+            --no-progressbar

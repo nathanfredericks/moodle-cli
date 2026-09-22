@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Moodle MCP server running on AWS Lambda
+
+Parameters:
+  MoodleSecretName:
+    Type: String
+    Default: moodle-mcp
+    Description: Secrets Manager secret containing MOODLE_URL, MOODLE_TOKEN, and MCP_API_KEY.
+
+Resources:
+  MoodleMCPRuntimeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: moodle-mcp-runtime
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: MoodleMCPRuntime
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadMoodleSecret
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${MoodleSecretName}-*
+              - Sid: WriteFunctionLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/moodle-mcp:*
+
+  MoodleMCPLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/moodle-mcp
+      RetentionInDays: 30
+
+  MoodleMCPFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: MoodleMCPLogGroup
+    Metadata:
+      Dockerfile: Dockerfile.lambda
+      DockerContext: .
+      DockerTag: lambda
+    Properties:
+      FunctionName: moodle-mcp
+      PackageType: Image
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 900
+      ReservedConcurrentExecutions: 5
+      Role: !GetAtt MoodleMCPRuntimeRole.Arn
+      Environment:
+        Variables:
+          MOODLE_SECRET_ID: !Ref MoodleSecretName
+          AWS_LWA_PORT: "8080"
+          AWS_LWA_READINESS_CHECK_PATH: /healthz
+          AWS_LWA_READINESS_CHECK_HEALTHY_STATUS: "200"
+          AWS_LWA_INVOKE_MODE: response_stream
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  MoodleMCPUrl:
+    Description: Streamable HTTP MCP endpoint.
+    Value: !Sub ${MoodleMCPFunctionUrl.FunctionUrl}mcp
+  MoodleMCPHealthUrl:
+    Description: Lambda Web Adapter readiness and health endpoint.
+    Value: !Sub ${MoodleMCPFunctionUrl.FunctionUrl}healthz

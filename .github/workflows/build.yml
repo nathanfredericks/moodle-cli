@@ -132,6 +132,7 @@ jobs:
             --stack-name "$STACK_NAME" \
             --region "$AWS_REGION" \
             --s3-bucket "$SAM_ARTIFACT_BUCKET" \
+            --image-repository "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY" \
             --parameter-overrides "LambdaImageUri=${{ steps.image.outputs.uri }}" MoodleSecretName=moodle-mcp \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \

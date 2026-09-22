@@ -45,6 +45,17 @@ jobs:
           sam validate --lint --template-file template.yaml
           sam validate --lint --template-file infrastructure/bootstrap.yaml
 
+      - name: Build local CLI image
+        run: |
+          docker buildx build \
+            --file Dockerfile \
+            --build-arg VERSION="$GITHUB_SHA" \
+            --tag moodle-cli:validate \
+            --load \
+            --provenance=false \
+            --sbom=false \
+            .
+
       - name: Build Lambda image
         run: |
           for attempt in 1 2 3 4 5; do

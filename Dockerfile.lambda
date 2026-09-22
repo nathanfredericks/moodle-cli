@@ -15,9 +15,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
 
 FROM public.ecr.aws/awsguru/aws-lambda-adapter:1.0.1 AS adapter
 
-FROM gcr.io/distroless/static-debian12:nonroot
-COPY --from=adapter /lambda-adapter /opt/extensions/lambda-adapter
-COPY --from=build /out/moodle-lambda /usr/local/bin/moodle-lambda
+FROM gcr.io/distroless/static-debian12
+COPY --from=adapter --chmod=755 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=build --chmod=755 /out/moodle-lambda /usr/local/bin/moodle-lambda
 
 ENV AWS_LWA_PORT=8080 \
     AWS_LWA_READINESS_CHECK_PATH=/healthz \
@@ -25,5 +25,4 @@ ENV AWS_LWA_PORT=8080 \
     AWS_LWA_INVOKE_MODE=response_stream
 
 EXPOSE 8080
-USER nonroot:nonroot
 ENTRYPOINT ["/usr/local/bin/moodle-lambda"]

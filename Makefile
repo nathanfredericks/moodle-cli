@@ -8,7 +8,7 @@ build:
 	go build $(LDFLAGS) -o $(BINARY) ./cmd/moodle
 
 build-lambda:
-	docker build --platform linux/arm64 -f Dockerfile.lambda --build-arg VERSION=$(VERSION) -t moodle-mcp:local .
+	docker build --platform linux/arm64 -f Dockerfile.lambda --build-arg BUILDPLATFORM=linux/$(shell go env GOARCH) --build-arg VERSION=$(VERSION) -t moodle-mcp:local .
 
 test:
 	go test ./... -v -count=1

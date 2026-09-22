@@ -31,8 +31,8 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up AWS SAM
         uses: aws-actions/setup-sam@v2
@@ -45,16 +45,21 @@ jobs:
           sam validate --lint --template-file template.yaml
           sam validate --lint --template-file infrastructure/bootstrap.yaml
 
-      - name: Preload Lambda Web Adapter
+      - name: Build Lambda image
         run: |
           for attempt in 1 2 3 4 5; do
-            docker pull --platform linux/arm64 public.ecr.aws/awsguru/aws-lambda-adapter:1.0.1 && exit 0
+            docker buildx build \
+              --platform linux/arm64 \
+              --file Dockerfile.lambda \
+              --build-arg VERSION="$GITHUB_SHA" \
+              --tag moodle-mcp:validate \
+              --load \
+              --provenance=false \
+              --sbom=false \
+              . && exit 0
             sleep $((attempt * 10))
           done
           exit 1
-
-      - name: Build Lambda image
-        run: sam build --template-file template.yaml
 
   deploy:
     needs: validate
@@ -73,8 +78,8 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up AWS SAM
         uses: aws-actions/setup-sam@v2
@@ -88,31 +93,45 @@ jobs:
           role-session-name: moodle-mcp-github-actions
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Preload Lambda Web Adapter
-        run: |
-          for attempt in 1 2 3 4 5; do
-            docker pull --platform linux/arm64 public.ecr.aws/awsguru/aws-lambda-adapter:1.0.1 && exit 0
-            sleep $((attempt * 10))
-          done
-          exit 1
-
-      - name: Build Lambda image
-        run: sam build --template-file template.yaml
-
       - name: Authenticate Docker to ECR
         run: |
           aws ecr get-login-password --region "$AWS_REGION" |
             docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
+      - name: Build and publish Lambda image
+        id: image
+        run: |
+          image_repository="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY"
+          for attempt in 1 2 3 4 5; do
+            if docker buildx build \
+              --platform linux/arm64 \
+              --file Dockerfile.lambda \
+              --build-arg VERSION="$GITHUB_SHA" \
+              --tag "$image_repository:$GITHUB_SHA" \
+              --push \
+              --provenance=false \
+              --sbom=false \
+              .; then
+              image_digest=$(aws ecr describe-images \
+                --repository-name "$ECR_REPOSITORY" \
+                --image-ids imageTag="$GITHUB_SHA" \
+                --query 'imageDetails[0].imageDigest' \
+                --output text)
+              echo "uri=$image_repository@$image_digest" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep $((attempt * 10))
+          done
+          exit 1
+
       - name: Deploy to Lambda
         run: |
           sam deploy \
-            --template-file .aws-sam/build/template.yaml \
+            --template-file template.yaml \
             --stack-name "$STACK_NAME" \
             --region "$AWS_REGION" \
             --s3-bucket "$SAM_ARTIFACT_BUCKET" \
-            --image-repositories "MoodleMCPFunction=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY" \
-            --parameter-overrides MoodleSecretName=moodle-mcp \
+            --parameter-overrides "LambdaImageUri=${{ steps.image.outputs.uri }}" MoodleSecretName=moodle-mcp \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \

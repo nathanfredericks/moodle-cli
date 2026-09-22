@@ -8,7 +8,7 @@ build:
 	go build $(LDFLAGS) -o $(BINARY) ./cmd/moodle
 
 build-lambda:
-	docker build --platform linux/arm64 -f Dockerfile.lambda --build-arg BUILDPLATFORM=linux/$(shell go env GOARCH) --build-arg VERSION=$(VERSION) -t moodle-mcp:local .
+	docker buildx build --platform linux/arm64 --load -f Dockerfile.lambda --build-arg VERSION=$(VERSION) -t moodle-mcp:local .
 
 test:
 	go test ./... -v -count=1
@@ -30,8 +30,7 @@ sam-validate:
 	sam validate --lint --template-file template.yaml
 	sam validate --lint --template-file infrastructure/bootstrap.yaml
 
-sam-build:
-	sam build --template-file template.yaml
+sam-build: build-lambda
 
 install: build
 	mv $(BINARY) $(GOPATH)/bin/

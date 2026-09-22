@@ -1,6 +1,6 @@
 # Deploying Moodle MCP to AWS Lambda
 
-The production MCP server runs as an ARM64 Lambda container behind a response-streaming Function URL. AWS SAM builds the image, uploads it to the private `moodle-mcp` ECR repository, and deploys the `moodle-mcp` CloudFormation stack in `ca-central-1`.
+The production MCP server runs as an ARM64 Lambda container behind a response-streaming Function URL. Docker Buildx creates the image, and AWS SAM deploys its immutable digest from the private `moodle-mcp` ECR repository to the `moodle-mcp` CloudFormation stack in `ca-central-1`.
 
 The Function URL uses AWS `NONE` authorization so ordinary MCP clients can connect. The application itself requires `Authorization: Bearer <MCP_API_KEY>` on `/mcp`. The `/healthz` endpoint is intentionally public and returns no configuration data.
 
@@ -42,7 +42,7 @@ The deploy job:
 1. Assumes the dedicated deployment role.
 2. Builds the Lambda image with AWS SAM.
 3. Pushes the image to the private `moodle-mcp` ECR repository.
-4. Updates the `moodle-mcp` stack with rollback enabled.
+4. Deploys the resulting immutable image digest to the `moodle-mcp` stack with rollback enabled.
 
 Production deployment jobs are serialized. ECR retains the ten most recent images.
 

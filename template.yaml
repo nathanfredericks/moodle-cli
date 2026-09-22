@@ -3,6 +3,9 @@ Transform: AWS::Serverless-2016-10-31
 Description: Moodle MCP server running on AWS Lambda
 
 Parameters:
+  LambdaImageUri:
+    Type: String
+    Description: Immutable ECR image URI, including its sha256 digest.
   MoodleSecretName:
     Type: String
     Default: moodle-mcp
@@ -45,13 +48,10 @@ Resources:
   MoodleMCPFunction:
     Type: AWS::Serverless::Function
     DependsOn: MoodleMCPLogGroup
-    Metadata:
-      Dockerfile: Dockerfile.lambda
-      DockerContext: .
-      DockerTag: lambda
     Properties:
       FunctionName: moodle-mcp
       PackageType: Image
+      ImageUri: !Ref LambdaImageUri
       Architectures:
         - arm64
       MemorySize: 256

@@ -56,7 +56,7 @@ Resources:
         - arm64
       MemorySize: 256
       Timeout: 900
-      ReservedConcurrentExecutions: 5
+      ReservedConcurrentExecutions: 20
       Role: !GetAtt MoodleMCPRuntimeRole.Arn
       Environment:
         Variables:

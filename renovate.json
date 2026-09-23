@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests"
+  ],
+  "minimumReleaseAge": "7 days",
+  "dependencyDashboard": false,
+  "prCreation": "not-pending",
+  "internalChecksFilter": "strict",
+  "internalChecksAsSuccess": true,
+  "packageRules": [
+    {
+      "matchCurrentValue": "/(?i)^[0-9a-f]{40}$/",
+      "enabled": false
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "automerge": true,
+      "automergeStrategy": "squash",
+      "platformAutomerge": false
+    }
+  ]
+}
